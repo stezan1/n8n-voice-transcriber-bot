@@ -1,0 +1,269 @@
+{
+  "name": "wa-automation copy",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "638d687a-e59c-4d68-9c6b-8be819b27601",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        -120
+      ],
+      "id": "4b96eb91-f8b9-43bc-b778-46c2383f9e2d",
+      "name": "Webhook",
+      "webhookId": "638d687a-e59c-4d68-9c6b-8be819b27601",
+      "notesInFlow": false,
+      "notes": "receive messages from whatsapp"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an intelligent medical assistant.\n\nGiven the unstructured transcription of a conversation between a patient and a doctor below:\n\n'''\n{{ $json.body.transcription }}\n'''\n\nExtract the relevant clinical information and organize it strictly as a simple JSON object with the following fields:\n\n- patientName (string)\n- age (number)\n- gender (string)\n- symptoms (string)\n- durationOfSymptoms (string)\n- diagnosis (string)\n- prescribedMedications (string)\n- instructions (string)\n- followUpAdvice (string)\n- referredSpecialist (string)\n\nIf any field is missing in the text, leave it as an empty string.\n\nOutput only the JSON object. Do not include any explanations or extra text.\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        -200,
+        -140
+      ],
+      "id": "50d0a454-18ee-4932-83d6-475b364383c7",
+      "name": "AI Agent",
+      "notesInFlow": false,
+      "notes": "takes the transcribed input and analyzes and convert into json"
+    },
+    {
+      "parameters": {
+        "model": "gemma3:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        100
+      ],
+      "id": "e4be9780-e904-4044-9222-b0e5514dd144",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "x1virxoGX3s1QITt",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://localhost:44311/api/Patient",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{$json[\"output\"][0][\"json\"]}}",
+        "options": {
+          "allowUnauthorizedCerts": true
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        400,
+        -140
+      ],
+      "id": "92d85b00-8bab-48cd-8df6-8e8735e90dcb",
+      "name": "HTTP Request",
+      "notes": "post the json data to database"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all input items\nconst allItems = $input.all();\n\n// Access the first item's JSON\nconst rawOutput = allItems[0]?.json?.output || '';\n\n// Trim whitespace\nlet cleaned = rawOutput.trim();\n\n// Remove markdown code block start\nif (cleaned.startsWith('```')){\n  cleaned = cleaned.slice(7).trim();\n}\n// Remove markdown code block end\nif (cleaned.endsWith('```')) {\n  cleaned = cleaned.slice(0, -3).trim();\n}\n\ntry {\n  // Parse JSON string\n  const parsedJson = JSON.parse(cleaned);\n\n  // Return parsed JSON to next nodes\n  return {\n    output: [\n      { json: parsedJson }\n    ]\n  };\n} catch (error) {\n  return {\n    output: [\n      {\n        json: {\n          error: 'Failed to parse JSON',\n          message: error instanceof Error ? error.message : String(error),\n          raw: rawOutput\n        }\n      }\n    ]\n  };\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        200,
+        -140
+      ],
+      "id": "a802b46a-f992-469b-baf1-7a82182212fe",
+      "name": "convert string to json"
+    },
+    {
+      "parameters": {
+        "content": "**receive messages from whatsapp**"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -900,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "88a9b764-289a-4de3-b985-28613eebc7a7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "**if transcription text received then only pass it to ai agent**"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -580,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "9d342acc-82bc-405a-9ff9-b5dfa2480c6d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "**takes the transcribed input and analyzes and convert into json**"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -220,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "ba657c83-d181-4b83-915c-075471bf85d6",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "**converts the ai agent's output to formatted json**"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        100,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "3421c8ce-e174-45d6-99ce-b33fbf991851",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "**make a post request to add the json data into database**"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        380,
+        -320
+      ],
+      "typeVersion": 1,
+      "id": "f1e064c6-e41c-4054-9fb4-a3b212769cfd",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "70fb39b4-8e51-44ee-94a1-83a4a8983c58",
+              "leftValue": "={{ $json.body.type}}",
+              "rightValue": "transcription",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -500,
+        -120
+      ],
+      "id": "e98d1f88-79ef-4b4f-9365-ea56589abee4",
+      "name": "If transcription type",
+      "notesInFlow": false,
+      "notes": "if transcription text received then only pass it to ai agent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If transcription type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "convert string to json",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "convert string to json": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If transcription type": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0ac7b4ca-066a-4bc4-88dd-60fd6334b552",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d43024cb60abf7e0f88509d01c614dfc585c7a680dcef52bdd1242119e89a13f"
+  },
+  "id": "6aHDwqnlsAj1ZhGG",
+  "tags": []
+}
